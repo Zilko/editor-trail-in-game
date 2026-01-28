@@ -82,7 +82,7 @@
 		"enable-hold-indicator": {
 			"name": "Enable Hold Indicator",
 			"description": "Dims the trail when holding",
-			"default": true,
+			"default": false,
 			"type": "bool"
 		}
 	}

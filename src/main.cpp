@@ -3,46 +3,73 @@
 
 using namespace geode::prelude;
 
+static ccColor4F g_p1TrailColor;
+static ccColor4F g_p2TrailColor;
+static ccColor4F g_p1IndicatorColor;
+static ccColor4F g_p2IndicatorColor;
+static bool g_trailEnabled = false;
+static bool g_clickIndicator = false;
+static bool g_releaseIndicator = false;
+static bool g_holdIndicator = false;
+static float g_clickIndicatorSize = 1.f;
+static float g_releaseIndicatorSize = 1.f;
+
+void updateSettings() {
+    g_trailEnabled = Mod::get()->getSettingValue<bool>("enable-trail");
+    g_p1TrailColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p1-trail-color"));
+    g_p2TrailColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p2-trail-color"));
+    g_clickIndicator = Mod::get()->getSettingValue<bool>("enable-click-indicator");
+    g_releaseIndicator = Mod::get()->getSettingValue<bool>("enable-release-indicator");
+    g_clickIndicatorSize = Mod::get()->getSettingValue<float>("click-indicator-size");
+    g_releaseIndicatorSize = Mod::get()->getSettingValue<float>("release-indicator-size");
+    g_p1IndicatorColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p1-indicator-color"));
+    g_p2IndicatorColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p2-indicator-color"));
+    g_holdIndicator = Mod::get()->getSettingValue<bool>("enable-hold-indicator");
+}
+
+void darkenColor(ccColor4F& color) {
+    color.r *= 0.8f;
+    color.g *= 0.8f;
+    color.b *= 0.8f;
+}
+
+void setHookEnabled(std::string_view name, bool enabled) {
+    for (Hook* hook : Mod::get()->getHooks()) {
+        if (hook->getDisplayName() == name) {
+            (void)(enabled ? hook->enable() : hook->disable());
+            break;
+        }
+    }
+}
+
 class $modify(ProPlayLayer, PlayLayer) {
 
-    struct Fields {
+    struct Fields { 
         CCDrawNode* m_drawNode = nullptr;
         CCPoint m_previousP1Position = {0, 0};
         CCPoint m_previousP2Position = {0, 0};
-        ccColor4F m_p1TrailColor = false;
-        ccColor4F m_p2TrailColor = false;
-        ccColor4F m_p1IndicatorColor = false;
-        ccColor4F m_p2IndicatorColor = false;
-        bool m_trailEnabled = false;
         bool m_p1Holding = false;
         bool m_p2Holding = false;
-        bool m_clickIndicator = false;
-        bool m_releaseIndicator = false;
-        bool m_holdIndicator = false;
-        float m_clickIndicatorSize = 1.f;
-        float m_releaseIndicatorSize = 1.f;
     };
-
-    void darken(ccColor4F& color) {
-        color.r *= 0.73f;
-        color.g *= 0.73f;
-        color.b *= 0.73f;
-    }
 
     void postUpdate(float dt) {
         PlayLayer::postUpdate(dt);
 
+        if (!g_trailEnabled) {
+            return;
+        }
+
         auto f = m_fields.self();
-        
-        if (!f->m_drawNode || !f->m_trailEnabled) {
+
+        if (!f->m_drawNode) {
             return;
         }
 
         if (f->m_previousP1Position.y != 0) {
-            auto color = f->m_p1TrailColor;
+            auto color = g_p1TrailColor;
 
-            if (f->m_holdIndicator && f->m_p1Holding) {
-                darken(color);
+            if (g_holdIndicator && f->m_p1Holding) {
+                darkenColor(color);
             }
 
             f->m_drawNode->drawSegment(f->m_previousP1Position, m_player1->getPosition(), 0.5f, color);
@@ -55,10 +82,10 @@ class $modify(ProPlayLayer, PlayLayer) {
         }
 
         if (f->m_previousP2Position.y != 0) {
-            auto color = f->m_p2TrailColor;
+            auto color = g_p2TrailColor;
 
-            if (f->m_holdIndicator && f->m_p2Holding) {
-                darken(color);
+            if (g_holdIndicator && f->m_p2Holding) {
+                darkenColor(color);
             }
         
             f->m_drawNode->drawSegment(f->m_previousP2Position, m_player2->getPosition(), 0.5f, color);
@@ -84,21 +111,16 @@ class $modify(ProPlayLayer, PlayLayer) {
         PlayLayer::setupHasCompleted();
 
         if (!Mod::get()->getSettingValue<bool>("enabled")) {
+            setHookEnabled("PlayLayer::postUpdate", false);
+            setHookEnabled("GJBaseGameLayer::handleButton", false);
+
             return;
         }
 
-        auto f = m_fields.self();
+        setHookEnabled("PlayLayer::postUpdate", g_trailEnabled);
+        setHookEnabled("GJBaseGameLayer::handleButton", true);
 
-        f->m_trailEnabled = Mod::get()->getSettingValue<bool>("enable-trail");
-        f->m_p1TrailColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p1-trail-color"));
-        f->m_p2TrailColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p2-trail-color"));
-        f->m_clickIndicator = Mod::get()->getSettingValue<bool>("enable-click-indicator");
-        f->m_releaseIndicator = Mod::get()->getSettingValue<bool>("enable-release-indicator");
-        f->m_clickIndicatorSize = Mod::get()->getSettingValue<float>("click-indicator-size");
-        f->m_releaseIndicatorSize = Mod::get()->getSettingValue<float>("release-indicator-size");
-        f->m_p1IndicatorColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p1-indicator-color"));
-        f->m_p2IndicatorColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p2-indicator-color"));
-        f->m_holdIndicator = Mod::get()->getSettingValue<bool>("enable-hold-indicator");
+        auto f = m_fields.self();
         
         f->m_drawNode = CCDrawNode::create();
         f->m_drawNode->setID("drawy-node"_spr);
@@ -113,10 +135,6 @@ class $modify(ProPlayLayer, PlayLayer) {
 class $modify(GJBaseGameLayer) {
 
     void drawSquare(CCDrawNode* drawNode, const CCPoint& pos, const ccColor4F& color, float size) {
-        if (!drawNode) {
-            return;
-        }
-
         drawNode->drawRect(
             pos - ccp(2, 2) * size,
             pos + ccp(2, 2) * size,
@@ -127,10 +145,6 @@ class $modify(GJBaseGameLayer) {
     }
 
     void drawTriangle(CCDrawNode* drawNode, const CCPoint& pos, const ccColor4F& color, float size) {
-        if (!drawNode) {
-            return;
-        }
-        
         drawNode->drawPolygon(
             std::array<CCPoint, 3>{
                 pos + ccp(0, 2) * size,
@@ -157,15 +171,15 @@ class $modify(GJBaseGameLayer) {
         auto isPlayer1 = !m_gameState.m_isDualMode || player1 || (!m_levelSettings->m_twoPlayerMode && m_gameState.m_isDualMode);
         auto isPlayer2 = m_gameState.m_isDualMode && (!player1 || !m_levelSettings->m_twoPlayerMode);
 
-        if ((down && f->m_clickIndicator) || (!down && f->m_releaseIndicator)) {        
+        if ((down && g_clickIndicator) || (!down && g_releaseIndicator)) {        
             if (isPlayer1) {
-                down ? drawSquare(f->m_drawNode, m_player1->getPosition(), f->m_p1IndicatorColor, f->m_clickIndicatorSize)
-                    : drawTriangle(f->m_drawNode, m_player1->getPosition(), f->m_p1IndicatorColor, f->m_releaseIndicatorSize);
+                down ? drawSquare(f->m_drawNode, m_player1->getPosition(), g_p1IndicatorColor, g_clickIndicatorSize)
+                    : drawTriangle(f->m_drawNode, m_player1->getPosition(), g_p1IndicatorColor, g_releaseIndicatorSize);
             }
 
             if (isPlayer2) {
-                down ? drawSquare(f->m_drawNode, m_player2->getPosition(), f->m_p2IndicatorColor, f->m_clickIndicatorSize)
-                    : drawTriangle(f->m_drawNode, m_player2->getPosition(), f->m_p2IndicatorColor, f->m_releaseIndicatorSize);
+                down ? drawSquare(f->m_drawNode, m_player2->getPosition(), g_p2IndicatorColor, g_clickIndicatorSize)
+                    : drawTriangle(f->m_drawNode, m_player2->getPosition(), g_p2IndicatorColor, g_releaseIndicatorSize);
             }
         }
 
@@ -184,3 +198,11 @@ class $modify(GJBaseGameLayer) {
     }
 
 };
+
+$on_mod(Loaded) {
+    updateSettings();
+
+    listenForAllSettingChanges([](auto) {
+        updateSettings();
+    });
+}
