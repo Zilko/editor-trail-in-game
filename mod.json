@@ -1,0 +1,89 @@
+{
+	"geode": "4.10.0",
+	"gd": {
+		"win": "2.2074",
+		"android": "2.2074",
+		"mac": "2.2074",
+		"ios": "2.2074"
+	},
+	"id": "zilko.editor_trail_in_game",
+	"name": "Editor Trail In-Game",
+	"version": "v1.0.0",
+	"developer": "Zilko",
+	"links": {
+		"source": "https://github.com/Zilko/editor-trail-in-game",
+		"community": "https://discord.gg/w6yvdzVzBd"
+	},
+	"description": "adds editor trail outside the editor",
+	"tags": [ "gameplay", "editor", "offline", "enhancement", "utility", "cheat" ],
+	"settings": {
+		"enabled": {
+			"name": "Enabled",
+			"type": "bool",
+			"default": true
+		},
+		"enable-trail": {
+			"name": "Enable Trail",
+			"type": "bool",
+			"default": true
+		},
+		"p1-trail-color": {
+			"name": "P1 Trail Color",
+			"type": "rgba",
+			"default": [51, 255, 51, 255]
+		},
+		"p2-trail-color": {
+			"name": "P2 Trail Color",
+			"type": "rgba",
+			"default": [51, 255, 255, 255]
+		},
+		"enable-click-indicator": {
+			"name": "Enable Click Indicator",
+			"type": "bool",
+			"default": true
+		},
+		"enable-release-indicator": {
+			"name": "Enable Release Indicator",
+			"type": "bool",
+			"default": false
+		},
+		"click-indicator-size": {
+			"name": "Click Indicator Size",
+			"type": "float",
+			"default": 1.0,
+			"min": 0.0,
+			"control": {
+				"arrows": false,
+				"slider": true,
+				"slider-step": 0.01
+			}
+		},
+		"release-indicator-size": {
+			"name": "Release Indicator Size",
+			"type": "float",
+			"default": 1.0,
+			"min": 0.0,
+			"control": {
+				"arrows": false,
+				"slider": true,
+				"slider-step": 0.01
+			}
+		},
+		"p1-indicator-color": {
+			"name": "P1 Indicator Color",
+			"type": "rgba",
+			"default": [255, 127, 0, 255]
+		},
+		"p2-indicator-color": {
+			"name": "P2 Indicator Color",
+			"type": "rgba",
+			"default": [208, 255, 0, 255]
+		},
+		"enable-hold-indicator": {
+			"name": "Enable Hold Indicator",
+			"description": "Dims the trail when holding",
+			"default": true,
+			"type": "bool"
+		}
+	}
+}
