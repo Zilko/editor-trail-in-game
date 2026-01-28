@@ -127,6 +127,10 @@ class $modify(GJBaseGameLayer) {
     }
 
     void drawTriangle(CCDrawNode* drawNode, const CCPoint& pos, const ccColor4F& color, float size) {
+        if (!drawNode) {
+            return;
+        }
+        
         drawNode->drawPolygon(
             std::array<CCPoint, 3>{
                 pos + ccp(0, 2) * size,
