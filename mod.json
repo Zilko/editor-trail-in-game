@@ -27,6 +27,13 @@
 			"type": "bool",
 			"default": true
 		},
+		"trail-thickness": {
+			"name": "Trail Thickness",
+			"type": "float",
+			"default": 0.5,
+			"min": 0.01,
+			"max": 50.0
+		},
 		"p1-trail-color": {
 			"name": "P1 Trail Color",
 			"type": "rgba",
@@ -44,6 +51,12 @@
 		},
 		"enable-release-indicator": {
 			"name": "Enable Release Indicator",
+			"type": "bool",
+			"default": false
+		},
+		"enable-sides-indicator": {
+			"name": "Enable Left/Right Indicator",
+			"description": "for platformer",
 			"type": "bool",
 			"default": false
 		},

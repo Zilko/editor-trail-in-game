@@ -11,11 +11,14 @@ static bool g_trailEnabled = false;
 static bool g_clickIndicator = false;
 static bool g_releaseIndicator = false;
 static bool g_holdIndicator = false;
+static bool g_sidesIndicator = false;
 static float g_clickIndicatorSize = 1.f;
 static float g_releaseIndicatorSize = 1.f;
+static float g_trailThickness = 0.5f;
 
 void updateSettings() {
     g_trailEnabled = Mod::get()->getSettingValue<bool>("enable-trail");
+    g_trailThickness = Mod::get()->getSettingValue<float>("trail-thickness");
     g_p1TrailColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p1-trail-color"));
     g_p2TrailColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p2-trail-color"));
     g_clickIndicator = Mod::get()->getSettingValue<bool>("enable-click-indicator");
@@ -25,6 +28,7 @@ void updateSettings() {
     g_p1IndicatorColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p1-indicator-color"));
     g_p2IndicatorColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p2-indicator-color"));
     g_holdIndicator = Mod::get()->getSettingValue<bool>("enable-hold-indicator");
+    g_sidesIndicator = Mod::get()->getSettingValue<bool>("enable-sides-indicator");
 }
 
 void darkenColor(ccColor4F& color) {
@@ -72,7 +76,7 @@ class $modify(ProPlayLayer, PlayLayer) {
                 darkenColor(color);
             }
 
-            f->m_drawNode->drawSegment(f->m_previousP1Position, m_player1->getPosition(), 0.5f, color);
+            f->m_drawNode->drawSegment(f->m_previousP1Position, m_player1->getPosition(), g_trailThickness, color);
         }
 
         f->m_previousP1Position = m_player1->getPosition();
@@ -88,7 +92,7 @@ class $modify(ProPlayLayer, PlayLayer) {
                 darkenColor(color);
             }
         
-            f->m_drawNode->drawSegment(f->m_previousP2Position, m_player2->getPosition(), 0.5f, color);
+            f->m_drawNode->drawSegment(f->m_previousP2Position, m_player2->getPosition(), g_trailThickness, color);
         }
 
         f->m_previousP2Position = m_player2->getPosition();
@@ -96,6 +100,7 @@ class $modify(ProPlayLayer, PlayLayer) {
 
     void resetLevel() {
         PlayLayer::resetLevel();
+
         auto f = m_fields.self();
 
         if (f->m_drawNode) {
@@ -155,10 +160,43 @@ class $modify(GJBaseGameLayer) {
         );
     }
 
+    void drawTriangleLeft(CCDrawNode* drawNode, const CCPoint& pos, const ccColor4F& color, float size) {
+        drawNode->drawPolygon(
+            std::array<CCPoint, 3>{
+                pos + ccp(-2, 0) * size,
+                pos + ccp(2, 2) * size,
+                pos + ccp(2, -2) * size
+            }.data(),
+            3, color, 0.f, {0.f, 0.f, 0.f, 0.f}
+        );
+    }
+
+    void drawTriangleRight(CCDrawNode* drawNode, const CCPoint& pos, const ccColor4F& color, float size) {
+        drawNode->drawPolygon(
+            std::array<CCPoint, 3>{
+                pos + ccp(2, 0) * size,
+                pos + ccp(-2, 2) * size,
+                pos + ccp(-2, -2) * size
+            }.data(),
+            3, color, 0.f, {0.f, 0.f, 0.f, 0.f}
+        );
+    }
+
+    void drawTriangleDown(CCDrawNode* drawNode, const CCPoint& pos, const ccColor4F& color, float size) {
+        drawNode->drawPolygon(
+            std::array<CCPoint, 3>{
+                pos + ccp(0, -2) * size,
+                pos + ccp(-2, 2) * size,
+                pos + ccp(2, 2) * size
+            }.data(),
+            3, color, 0.f, {0.f, 0.f, 0.f, 0.f}
+        );
+    }
+
     void handleButton(bool down, int button, bool player1) {
         GJBaseGameLayer::handleButton(down, button, player1);
 
-        if (!PlayLayer::get() || button != 1) {
+        if (!PlayLayer::get() || (!m_isPlatformer && button != 1)) {
             return;
         }
 
@@ -171,7 +209,7 @@ class $modify(GJBaseGameLayer) {
         auto isPlayer1 = !m_gameState.m_isDualMode || player1 || (!m_levelSettings->m_twoPlayerMode && m_gameState.m_isDualMode);
         auto isPlayer2 = m_gameState.m_isDualMode && (!player1 || !m_levelSettings->m_twoPlayerMode);
 
-        if ((down && g_clickIndicator) || (!down && g_releaseIndicator)) {        
+        if (button == 1 && ((down && g_clickIndicator) || (!down && g_releaseIndicator))) {        
             if (isPlayer1) {
                 down ? drawSquare(f->m_drawNode, m_player1->getPosition(), g_p1IndicatorColor, g_clickIndicatorSize)
                     : drawTriangle(f->m_drawNode, m_player1->getPosition(), g_p1IndicatorColor, g_releaseIndicatorSize);
@@ -180,6 +218,25 @@ class $modify(GJBaseGameLayer) {
             if (isPlayer2) {
                 down ? drawSquare(f->m_drawNode, m_player2->getPosition(), g_p2IndicatorColor, g_clickIndicatorSize)
                     : drawTriangle(f->m_drawNode, m_player2->getPosition(), g_p2IndicatorColor, g_releaseIndicatorSize);
+            }
+        }
+        else if (button != 1 && g_sidesIndicator && ((down && g_clickIndicator) || (!down && g_releaseIndicator))) {
+            if (isPlayer1) {
+                if (down) {
+                    button == 2 ? drawTriangleLeft(f->m_drawNode, m_player1->getPosition(), g_p1IndicatorColor, g_releaseIndicatorSize)
+                        : drawTriangleRight(f->m_drawNode, m_player1->getPosition(), g_p1IndicatorColor, g_releaseIndicatorSize);
+                } else {
+                    drawTriangleDown(f->m_drawNode, m_player1->getPosition(), g_p1IndicatorColor, g_releaseIndicatorSize);
+                }
+            }
+
+            if (isPlayer2) {
+                if (down) {
+                    button == 2 ? drawTriangleLeft(f->m_drawNode, m_player2->getPosition(), g_p2IndicatorColor, g_releaseIndicatorSize)
+                        : drawTriangleRight(f->m_drawNode, m_player2->getPosition(), g_p2IndicatorColor, g_releaseIndicatorSize);
+                } else {
+                    drawTriangleDown(f->m_drawNode, m_player2->getPosition(), g_p2IndicatorColor, g_releaseIndicatorSize);
+                }
             }
         }
 
