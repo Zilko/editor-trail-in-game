@@ -259,7 +259,7 @@ class $modify(GJBaseGameLayer) {
 $on_mod(Loaded) {
     updateSettings();
 
-    listenForAllSettingChanges([](auto) {
+    listenForAllSettingChanges([](std::string_view, std::shared_ptr<SettingV3>) {
         updateSettings();
     });
 }
