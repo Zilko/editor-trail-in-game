@@ -7,6 +7,7 @@ static ccColor4F g_p1TrailColor;
 static ccColor4F g_p2TrailColor;
 static ccColor4F g_p1IndicatorColor;
 static ccColor4F g_p2IndicatorColor;
+static bool g_modEnabled = false;
 static bool g_trailEnabled = false;
 static bool g_clickIndicator = false;
 static bool g_releaseIndicator = false;
@@ -17,6 +18,7 @@ static float g_releaseIndicatorSize = 1.f;
 static float g_trailThickness = 0.5f;
 
 void updateSettings() {
+    g_modEnabled = Mod::get()->getSettingValue<bool>("enabled");
     g_trailEnabled = Mod::get()->getSettingValue<bool>("enable-trail");
     g_trailThickness = Mod::get()->getSettingValue<float>("trail-thickness");
     g_p1TrailColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p1-trail-color"));
@@ -38,7 +40,7 @@ void darkenColor(ccColor4F& color) {
 }
 
 void setHookEnabled(std::string_view name, bool enabled) {
-    for (Hook* hook : Mod::get()->getHooks()) {
+    for (auto hook : Mod::get()->getHooks()) {
         if (hook->getDisplayName() == name) {
             (void)(enabled ? hook->enable() : hook->disable());
             break;
@@ -56,14 +58,47 @@ class $modify(ProPlayLayer, PlayLayer) {
         bool m_p2Holding = false;
     };
 
-    void postUpdate(float dt) {
-        PlayLayer::postUpdate(dt);
+    void updateState() {
+        auto f = m_fields.self();
 
-        if (!g_trailEnabled) {
+        if (!g_modEnabled) {
+            setHookEnabled("PlayLayer::postUpdate", false);
+            setHookEnabled("GJBaseGameLayer::handleButton", false);
+
+            if (f->m_drawNode) {
+                f->m_drawNode->clear();
+                f->m_drawNode->setVisible(false);
+            }
+
+            f->m_previousP1Position = CCPoint{0, 0};
+            f->m_previousP2Position = CCPoint{0, 0};
+
             return;
         }
 
+        setHookEnabled("PlayLayer::postUpdate", g_trailEnabled);
+        setHookEnabled("GJBaseGameLayer::handleButton", true);
+        
+        if (!f->m_drawNode) {
+            f->m_drawNode = CCDrawNode::create();
+            f->m_drawNode->setID("drawy-node"_spr);
+            f->m_drawNode->setBlendFunc({GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA});
+            f->m_drawNode->m_bUseArea = false;
+
+            m_objectLayer->addChild(f->m_drawNode, 500);
+        }
+
+        f->m_drawNode->setVisible(true);
+    }
+
+    void postUpdate(float dt) {
+        PlayLayer::postUpdate(dt);
+
         auto f = m_fields.self();
+
+        if (!g_trailEnabled || !g_modEnabled) {
+            return;
+        }
 
         if (!f->m_drawNode) {
             return;
@@ -114,25 +149,7 @@ class $modify(ProPlayLayer, PlayLayer) {
 
     void setupHasCompleted() {
         PlayLayer::setupHasCompleted();
-
-        if (!Mod::get()->getSettingValue<bool>("enabled")) {
-            setHookEnabled("PlayLayer::postUpdate", false);
-            setHookEnabled("GJBaseGameLayer::handleButton", false);
-
-            return;
-        }
-
-        setHookEnabled("PlayLayer::postUpdate", g_trailEnabled);
-        setHookEnabled("GJBaseGameLayer::handleButton", true);
-
-        auto f = m_fields.self();
-        
-        f->m_drawNode = CCDrawNode::create();
-        f->m_drawNode->setID("drawy-node"_spr);
-        f->m_drawNode->setBlendFunc({GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA});
-        f->m_drawNode->m_bUseArea = false;
-
-        m_objectLayer->addChild(f->m_drawNode, 500);
+        updateState();
     }
 
 };
@@ -261,5 +278,15 @@ $on_mod(Loaded) {
 
     listenForAllSettingChanges([](std::string_view, std::shared_ptr<SettingV3>) {
         updateSettings();
+    });
+    
+    listenForKeybindSettingPresses("toggle-trail", [](Keybind const& keybind, bool down, bool repeat, double timestamp) {
+        if (down && !repeat) {
+            Mod::get()->setSettingValue("enabled", !g_modEnabled);
+
+            if (auto pl = PlayLayer::get()) {
+                static_cast<ProPlayLayer*>(pl)->updateState();
+            }
+        }
     });
 }

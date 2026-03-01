@@ -1,5 +1,5 @@
 {
-	"geode": "5.1.0",
+	"geode": "5.2.0",
 	"gd": {
 		"win": "2.2081",
 		"android": "2.2081",
@@ -8,7 +8,7 @@
 	},
 	"id": "zilko.editor_trail_in_game",
 	"name": "Editor Trail In-Game",
-	"version": "v1.0.0",
+	"version": "v1.0.1",
 	"developer": "Zilko",
 	"links": {
 		"source": "https://github.com/Zilko/editor-trail-in-game",
@@ -26,6 +26,11 @@
 			"name": "Enable Trail",
 			"type": "bool",
 			"default": true
+		},
+		"toggle-trail": {
+			"name": "Toggle Editor Trail",
+			"type": "keybind",
+			"default": "Ctrl+T"
 		},
 		"trail-thickness": {
 			"name": "Trail Thickness",
