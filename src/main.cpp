@@ -281,12 +281,9 @@ $on_mod(Loaded) {
     });
     
     listenForKeybindSettingPresses("toggle-trail", [](Keybind const& keybind, bool down, bool repeat, double timestamp) {
-        if (down && !repeat) {
+        if (down && !repeat && PlayLayer::get()) {
             Mod::get()->setSettingValue("enabled", !g_modEnabled);
-
-            if (auto pl = PlayLayer::get()) {
-                static_cast<ProPlayLayer*>(pl)->updateState();
-            }
+            static_cast<ProPlayLayer*>(PlayLayer::get())->updateState();
         }
     });
 }
