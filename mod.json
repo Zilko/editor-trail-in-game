@@ -107,6 +107,13 @@
 			"description": "Dims the trail when holding",
 			"default": false,
 			"type": "bool"
+		},
+		"point-spacing": {
+			"name": "Point Spacing",
+			"description": "Controls how often points are placed for the trail. Higher values can improve performance but make the line less smooth",
+			"type": "string",
+			"default": "1",
+			"one-of": [ "1", "2", "4", "8", "16", "32", "64" ]
 		}
 	}
 }

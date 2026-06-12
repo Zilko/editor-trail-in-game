@@ -1,6 +1,7 @@
 # v1.0.3
 
 * added show trail on death
+* added point spacing setting for poeople with poor device specifications....
 
 # v1.0.2
 

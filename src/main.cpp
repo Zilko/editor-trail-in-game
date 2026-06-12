@@ -28,6 +28,7 @@ static bool g_sidesIndicator = false;
 static float g_clickIndicatorSize = 1.f;
 static float g_releaseIndicatorSize = 1.f;
 static float g_trailThickness = 0.5f;
+static int g_pointSpacing = 1;
 
 void updateSettings() {
     g_modEnabled = Mod::get()->getSettingValue<bool>("enabled");
@@ -43,6 +44,7 @@ void updateSettings() {
     g_p2IndicatorColor = ccc4FFromccc4B(Mod::get()->getSettingValue<ccColor4B>("p2-indicator-color"));
     g_holdIndicator = Mod::get()->getSettingValue<bool>("enable-hold-indicator");
     g_sidesIndicator = Mod::get()->getSettingValue<bool>("enable-sides-indicator");
+    g_pointSpacing = numFromString<int>(getSetting<"point-spacing", std::string>()).unwrapOr(1);
 }
 
 void darkenColor(ccColor4F& color) {
@@ -68,6 +70,7 @@ class $modify(ProPlayLayer, PlayLayer) {
         CCPoint m_previousP2Position = {0, 0};
         bool m_p1Holding = false;
         bool m_p2Holding = false;
+        int m_plap = 0;
     };
 
     void updateState() {
@@ -107,6 +110,16 @@ class $modify(ProPlayLayer, PlayLayer) {
         PlayLayer::postUpdate(dt);
 
         auto f = m_fields.self();
+
+        if (g_pointSpacing > 1) {
+            f->m_plap++;
+
+            if (f->m_plap < g_pointSpacing) {
+                return;
+            }
+
+            f->m_plap = 0;
+        }
 
         if (!g_trailEnabled || (!g_modEnabled && !getSetting<"enable-on-death", bool>())) {
             return;
