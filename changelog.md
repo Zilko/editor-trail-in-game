@@ -1,3 +1,7 @@
+# v1.0.3
+
+* added show trail on death
+
 # v1.0.2
 
 * make keybind only work in playlayer

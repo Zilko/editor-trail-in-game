@@ -3,6 +3,18 @@
 
 using namespace geode::prelude;
 
+template <string::ConstexprString S, typename T>
+const T& getSetting() {
+    static T value = (
+        listenForSettingChanges<T>(S.data(), [](T val) {
+            value = val;
+        }),
+        Mod::get()->getSettingValue<T>(S.data())
+    );
+
+    return value;
+}
+
 static ccColor4F g_p1TrailColor;
 static ccColor4F g_p2TrailColor;
 static ccColor4F g_p1IndicatorColor;
@@ -61,7 +73,7 @@ class $modify(ProPlayLayer, PlayLayer) {
     void updateState() {
         auto f = m_fields.self();
 
-        if (!g_modEnabled) {
+        if (!g_modEnabled && !getSetting<"enable-on-death", bool>()) {
             setHookEnabled("PlayLayer::postUpdate", false);
             setHookEnabled("GJBaseGameLayer::handleButton", false);
 
@@ -96,13 +108,15 @@ class $modify(ProPlayLayer, PlayLayer) {
 
         auto f = m_fields.self();
 
-        if (!g_trailEnabled || !g_modEnabled) {
+        if (!g_trailEnabled || (!g_modEnabled && !getSetting<"enable-on-death", bool>())) {
             return;
         }
 
         if (!f->m_drawNode) {
             return;
         }
+
+        f->m_drawNode->setVisible(g_modEnabled || (getSetting<"enable-on-death", bool>() && m_player1->m_isDead));
 
         if (f->m_previousP1Position.y != 0) {
             auto color = g_p1TrailColor;
@@ -278,6 +292,10 @@ $on_mod(Loaded) {
 
     listenForAllSettingChanges([](std::string_view, std::shared_ptr<SettingV3>) {
         updateSettings();
+        
+        if (auto pl = PlayLayer::get()) {
+            static_cast<ProPlayLayer*>(pl)->updateState();
+        }
     });
     
     listenForKeybindSettingPresses("toggle-trail", [](Keybind const& keybind, bool down, bool repeat, double timestamp) {
